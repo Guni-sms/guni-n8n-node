@@ -1,0 +1,53 @@
+{
+  "name": "n8n-nodes-guni-sms-mms",
+  "version": "0.1.1",
+  "description": "n8n node for sending SMS using Guni SMS API",
+  "keywords": [
+    "n8n-community-node-package",
+    "guni",
+    "sms",
+    "mms"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/your-username/n8n-nodes-guni-sms",
+  "author": {
+    "name": "Gunisms",
+    "email": "support@guni.com.au"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/n8n-nodes-guni-sms.git"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && gulp build:icons",
+    "dev": "tsc --watch",
+    "format": "prettier nodes credentials --write",
+    "lint": "eslint nodes credentials package.json",
+    "lintfix": "eslint nodes credentials package.json --fix",
+    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/GuniApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Guni/GuniSms.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "~5.45",
+    "eslint-plugin-n8n-nodes-base": "^1.11.0",
+    "gulp": "^4.0.2",
+    "n8n-workflow": "*",
+    "prettier": "^2.7.1",
+    "typescript": "~4.8.4"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
