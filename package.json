@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/n8n-nodes-guni-sms.git"
+    "url": " https://8sk123qkx0ik0l6py7c2aquu4h5tan@bitbucket.org/guni-sms/n8n-app.git"
   },
   "main": "dist/index.js",
   "scripts": {
