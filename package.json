@@ -36,7 +36,9 @@
       "dist/credentials/GuniApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Guni/GuniSms.node.js"
+      "dist/nodes/Guni/GuniSms.node.js",
+      "dist/nodes/Guni/GuniMms.node.js"
+
     ]
   },
   "devDependencies": {
