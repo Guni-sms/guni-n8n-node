@@ -1,7 +1,7 @@
 import { IExecuteFunctions, IDataObject } from 'n8n-workflow';
 
 /**
- * Makes a request to the Gunisms API using n8n helpers
+ * Makes a request to the Guni API using n8n helpers
  */
 export async function guniApiRequest(
 	this: IExecuteFunctions,
@@ -13,13 +13,13 @@ export async function guniApiRequest(
 ): Promise<any> {
 	const url = `https://apit.gunisms.com.au/api/v1${endpoint}`;
 
-	const options = {
+	const options: any = {
 		method,
 		url,
 		headers: {
 			Authorization: `Bearer ${apiKey}`,
 			'Content-Type': 'application/json',
-			'guni-token': apiKey,
+			'guni-token': apiKey, // some APIs require both
 		},
 		body,
 		qs: query,
@@ -27,12 +27,18 @@ export async function guniApiRequest(
 		timeout: 10000,
 	};
 
+	if (method === 'GET') {
+		delete options.body;
+	}
+
 	try {
 		return await this.helpers.request!(options);
 	} catch (error: any) {
-		// Just throw a normal Error with API message
 		const message =
-			error.response?.body?.message || error.response?.body || error.message || 'Unknown API error';
+			error.response?.body?.message ||
+			error.response?.body ||
+			error.message ||
+			'Unknown API error';
 		throw new Error(`Guni API Request Failed: ${message}`);
 	}
 }
