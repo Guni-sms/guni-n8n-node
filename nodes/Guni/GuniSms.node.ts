@@ -8,6 +8,7 @@ import {
 	NodeConnectionType,
 	NodeOperationError,
 } from 'n8n-workflow';
+
 import { guniApiRequest } from './GuniApi.helper';
 
 const ENGLISH_GATEWAY_SMS_CONFIG = [
@@ -30,6 +31,11 @@ const UNICODE_GATEWAY_SMS_CONFIG = [
 	{ min: 336, max: 402, sms: 6 },
 	{ min: 403, max: 469, sms: 7 },
 	{ min: 470, max: 536, sms: 8 },
+	{ min: 537, max: 605, sms: 9 },
+	{ min: 606, max: 672, sms: 10 },
+	{ min: 673, max: 739, sms: 11 },
+	{ min: 740, max: 796, sms: 12 },
+	{ min: 797, max: 851, sms: 13 },
 ];
 
 function calculateSmsParts(message: string) {
@@ -40,19 +46,14 @@ function calculateSmsParts(message: string) {
 	return { length: message.length, parts, encoding: isUnicode ? 'Unicode SMS' : 'GSM-7 SMS' };
 }
 
-// Extend INodeTypeDescription to include frontend
-interface INodeTypeDescriptionWithFrontend extends INodeTypeDescription {
-	frontend?: string;
-}
-
 export class GuniSms implements INodeType {
-	description: INodeTypeDescriptionWithFrontend = {
+	description: INodeTypeDescription = {
 		displayName: 'Guni SMS',
 		name: 'guniSms',
 		group: ['transform'],
 		icon: 'file:guni.svg',
 		version: 1,
-		description: 'Send SMS via Guni API with templates support',
+		description: 'Send SMS via Guni API',
 		defaults: { name: 'Guni SMS' },
 		inputs: [NodeConnectionType.Main],
 		outputs: [NodeConnectionType.Main],
@@ -62,7 +63,7 @@ export class GuniSms implements INodeType {
 				displayName: 'Sender Name or ID',
 				name: 'senderId',
 				type: 'options',
-				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+				description: 'Choose a sender ID. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 				typeOptions: { loadOptionsMethod: 'loadSenderIds' },
 				default: '',
 				required: true,
@@ -78,20 +79,13 @@ export class GuniSms implements INodeType {
 				default: 'notification',
 			},
 			{
-				displayName: 'Template Name or ID',
-				name: 'templateId',
-				type: 'options',
-				typeOptions: { loadOptionsMethod: 'loadTemplates' },
-				default: '',
-				description: 'Optional: select template to prefill message. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
-			},
-			{
 				displayName: 'Message',
 				name: 'message',
 				type: 'string',
 				typeOptions: { rows: 5 },
 				default: '',
-				placeholder: 'Message from template or previous node will appear here',
+				placeholder: 'Enter your message',
+				required: true,
 			},
 			{
 				displayName: 'Allow Unicode',
@@ -101,7 +95,6 @@ export class GuniSms implements INodeType {
 				description: 'Whether to allow Unicode characters in the message',
 			},
 		],
-		frontend: 'nodes/Guni/GuniSms.node.vue',
 	};
 
 	methods = {
@@ -109,39 +102,21 @@ export class GuniSms implements INodeType {
 			async loadSenderIds(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const credentials = await this.getCredentials('guniApi');
 				const token = credentials.apiToken as string;
+
 				const response = await guniApiRequest.call(
 					this as unknown as IExecuteFunctions,
 					'GET',
 					'/auth/ac/sender-ids',
-					{},
-					{},
+					{} as any,
+					{} as any,
 					token
 				);
+
 				if (!response?.data || !Array.isArray(response.data)) return [];
+
 				return response.data.map((s: { display: string; value: string }) => ({
 					name: s.display,
-					value: JSON.stringify({ id: s.value, display: s.display }),
-				}));
-			},
-
-			async loadTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-				const credentials = await this.getCredentials('guniApi');
-				const token = credentials.apiToken as string;
-				const response = await guniApiRequest.call(
-					this as unknown as IExecuteFunctions,
-					'GET',
-					'/mobile/template?limit=50&sortField=createdAt&sortOrder=descend',
-					{},
-					{},
-					token
-				);
-				const items = response?.data?.items;
-				if (!items || !Array.isArray(items)) return [];
-				const smsTemplates = items.filter((t: any) => t.mms === false);
-				return smsTemplates.map((t: any) => ({
-					name: t.name || t.content.slice(0, 50),
-					value: t._id,
-					content: t.content,
+					value: s.value,
 				}));
 			},
 		},
@@ -155,68 +130,102 @@ export class GuniSms implements INodeType {
 
 		for (let i = 0; i < items.length; i++) {
 			try {
-				const senderRaw = this.getNodeParameter('senderId', i) as string;
-				const senderData = JSON.parse(senderRaw);
-				const senderId = senderData.id as string;
-				const senderDisplay = (senderData.display as string).toLowerCase();
+				const senderId = this.getNodeParameter('senderId', i) as string;
+				if (!senderId) {
+					throw new NodeOperationError(this.getNode(), `Sender ID is required for item ${i}`);
+				}
 
 				const messageType = this.getNodeParameter('messageType', i) as string;
 				const allowUnicode = this.getNodeParameter('allowUnicode', i) as boolean;
-				const templateId = this.getNodeParameter('templateId', i) as string;
 				const nodeMessageParam = this.getNodeParameter('message', i) as string;
 
 				const prevMessage = (items[i].json?.body as any)?.message as string | undefined;
 				let nodeMessage = prevMessage || nodeMessageParam;
 
-				// Template fallback if message empty
-				if (templateId && (!prevMessage || !nodeMessageParam)) {
-					const templateResponse = await guniApiRequest.call(
-						this,
-						'GET',
-						`/mobile/template/${templateId}`,
-						{},
-						{},
-						token
-					);
-					if (templateResponse?.content) nodeMessage = templateResponse.content;
-				}
-
 				if (!allowUnicode) nodeMessage = nodeMessage.replace(/[^\x00-\x7F]/g, '');
 
+				// Determine optout, replyStopToOptOut & previewMessage
+				let optout = false;
+				let replyStopToOptOut = false;
 				let previewMessage = nodeMessage;
+				let extraLength = 0;
+
 				if (messageType === 'promotional') {
-					if (senderDisplay.includes('dedicated') || senderDisplay.includes('shared')) {
+					if (senderId.startsWith('#') || senderId.toLowerCase().includes('shared')) { // Shared number
+						optout = false;
+						replyStopToOptOut = true;
+						if (!nodeMessage.includes('Reply STOP')) 
 						previewMessage += '   Reply STOP to optout';
-					} else if (senderDisplay.includes('business') || senderDisplay.includes('personal')) {
+						extraLength = 23;
+					} else if (/^\d+$/.test(senderId)) { // Numeric number
+						if (senderId.startsWith('6')) { // Personal number
+							optout = true;
+							replyStopToOptOut = false;
+							if (!nodeMessage.includes('stopsms.co/u'))
+							previewMessage += '  stopsms.co/u######';
+							extraLength = 20;
+						} else if (senderId.startsWith('4')) { // Dedicated number
+							optout = false;
+							replyStopToOptOut = true;
+							if (!nodeMessage.includes('Reply STOP')) 
+							previewMessage += '   Reply STOP to optout';
+							extraLength = 23;
+						} else { // fallback
+							optout = true;
+							replyStopToOptOut = false;
+							if (!nodeMessage.includes('stopsms.co/u')) 
+							previewMessage += '  stopsms.co/u######';
+							extraLength = 20;
+						}
+					} else { // Business / text
+						optout = true;
+						replyStopToOptOut = false;
+						if (!nodeMessage.includes('stopsms.co/u')) nodeMessage += '  stopsms.co/u######';
 						previewMessage += '  stopsms.co/u######';
+						extraLength = 20;
 					}
 				}
 
-				const smsInfo = calculateSmsParts(previewMessage);
-
 				const inputContacts = (items[i].json?.body as any)?.contacts;
-				if (!inputContacts)
+				if (!inputContacts || !Array.isArray(inputContacts) || inputContacts.length === 0) {
 					throw new NodeOperationError(this.getNode(), `No contacts found in input [item ${i}]`);
+				}
 
-				const finalContacts = Array.isArray(inputContacts)
-					? inputContacts.join(',')
-					: inputContacts.toString().trim();
+				const smsInfo = calculateSmsParts(nodeMessage);
+				smsInfo.length += extraLength; // Add opt-out text length to total
+				smsInfo.parts = calculateSmsParts(nodeMessage).parts;
 
 				const requestBody = {
+					name: `Campaign ${new Date().toLocaleString()}`,
 					sender: senderId,
+					campaign_type: messageType,
+					camp_type: 'sms',
+					optout,
+					replyStopToOptOut,
+					contacts: inputContacts,
+					unsubscribe: 0,
+					totalContacts: inputContacts.length,
 					message: nodeMessage,
-					contacts: finalContacts,
-					campType: messageType,
+					saved: false,
 				};
 
-				const response = await guniApiRequest.call(this, 'POST', '/auth/ac/send', requestBody, {}, token);
+				console.log('GuniSMS Payload:', JSON.stringify(requestBody, null, 2));
+
+				const response = await guniApiRequest.call(
+					this,
+					'POST',
+					'/gateway/bulk?mode=Mobile',
+					requestBody,
+					{} as any,
+					token
+				);
 
 				returnData.push({
 					json: {
 						success: true,
-						sentTo: finalContacts,
-						usedMessage: nodeMessage,
+						sentTo: inputContacts,
 						previewMessage,
+						message: nodeMessage,
 						messageLength: smsInfo.length,
 						parts: smsInfo.parts,
 						encoding: smsInfo.encoding,
@@ -226,7 +235,12 @@ export class GuniSms implements INodeType {
 					},
 				});
 			} catch (error) {
-				returnData.push({ json: { success: false, error: (error as Error).message } });
+				returnData.push({
+					json: {
+						success: false,
+						error: (error as Error).message,
+					},
+				});
 			}
 		}
 

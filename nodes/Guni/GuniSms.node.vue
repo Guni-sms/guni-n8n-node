@@ -1,97 +1,86 @@
 <template>
-  <div class="n8n-row">
-    <n8n-form-item label="Sender ID" :required="true">
-      <n8n-select
-        v-model="senderId"
-        :options="node.parameters.senderId.options"
-        @change="onSenderChange"
-      />
-    </n8n-form-item>
+  <div>
+    <!-- Template Dropdown -->
+    <n8n-form-input
+      label="Template"
+      type="select"
+      v-model="templateId"
+      :options="templates"
+      @change="onTemplateChange"
+    />
 
-    <n8n-form-item label="Message Type">
-      <n8n-select
-        v-model="messageType"
-        :options="node.parameters.messageType.options"
-      />
-    </n8n-form-item>
+    <!-- Message Textarea -->
+    <n8n-form-textarea
+      label="Message"
+      v-model="message"
+      rows="5"
+      placeholder="Message from template or previous node will appear here"
+    />
 
-    <n8n-form-item label="Template">
-      <n8n-select
-        v-model="templateId"
-        :options="node.parameters.templateId.options"
-        @change="onTemplateChange"
-      />
-    </n8n-form-item>
-
-    <n8n-form-item label="Message">
-      <n8n-textarea
-        v-model="message"
-        :rows="5"
-        placeholder="Message from template or previous node will appear here"
-        @input="onMessageChange"
-      />
-      <div>
-        {{ messageLength }} characters, {{ smsParts }} SMS(s)
-      </div>
-    </n8n-form-item>
-
-    <n8n-form-item label="Allow Unicode">
-      <n8n-checkbox v-model="allowUnicode" />
-    </n8n-form-item>
+    <!-- Character Count & SMS Parts -->
+    <div style="margin-top:5px; font-size:12px; color:#555;">
+      Character count: {{ message.length }} | SMS parts: {{ smsParts }}
+    </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, watch } from 'vue';
+<script>
+export default {
+  props: {
+    nodeData: Object, // Node property data
+  },
 
-const message = ref('');
-const templateId = ref('');
-const senderId = ref('');
-const messageType = ref('notification');
-const allowUnicode = ref(false);
-const smsParts = ref(1);
-const messageLength = ref(0);
+  data() {
+    return {
+      message: this.nodeData?.message || '',
+      templateId: this.nodeData?.templateId || '',
+      templates: [
+        { name: 'Custom Message', value: '' },
+        // Backend will fill actual templates via props or API
+      ],
+    };
+  },
 
-const ENGLISH_GATEWAY_SMS_CONFIG = [
-  { min: 1, max: 160, sms: 1 },
-  { min: 161, max: 306, sms: 2 },
-  { min: 307, max: 459, sms: 3 },
-  { min: 460, max: 612, sms: 4 },
-  { min: 613, max: 765, sms: 5 },
-  { min: 766, max: 918, sms: 6 },
-  { min: 919, max: 1071, sms: 7 },
-  { min: 1072, max: 1224, sms: 8 },
-];
-const UNICODE_GATEWAY_SMS_CONFIG = [
-  { min: 1, max: 70, sms: 1 },
-  { min: 71, max: 134, sms: 2 },
-  { min: 135, max: 201, sms: 3 },
-  { min: 202, max: 268, sms: 4 },
-  { min: 269, max: 335, sms: 5 },
-  { min: 336, max: 402, sms: 6 },
-  { min: 403, max: 469, sms: 7 },
-  { min: 470, max: 536, sms: 8 },
-];
+  computed: {
+    smsParts() {
+      const len = this.message.length;
+      const isUnicode = /[^\x00-\x7F]/.test(this.message);
+      if (isUnicode) {
+        if (len <= 70) return 1;
+        if (len <= 134) return 2;
+        if (len <= 201) return 3;
+        if (len <= 268) return 4;
+        if (len <= 335) return 5;
+        return Math.ceil(len / 67); // For very long messages
+      } else {
+        if (len <= 160) return 1;
+        if (len <= 306) return 2;
+        if (len <= 459) return 3;
+        if (len <= 612) return 4;
+        if (len <= 765) return 5;
+        return Math.ceil(len / 153); // For very long messages
+      }
+    },
+  },
 
-function updateSmsCount(msg: string) {
-  const isUnicode = /[^\x00-\x7F]/.test(msg);
-  const config = isUnicode ? UNICODE_GATEWAY_SMS_CONFIG : ENGLISH_GATEWAY_SMS_CONFIG;
-  const matched = config.find((r) => msg.length >= r.min && msg.length <= r.max);
-  smsParts.value = matched ? matched.sms : 1;
-  messageLength.value = msg.length;
-}
+  methods: {
+    onTemplateChange() {
+      const selected = this.templates.find(t => t.value === this.templateId);
+      if (selected && selected.content) {
+        this.message = selected.content; // Auto-fill message
+      } else {
+        this.message = ''; // Custom Message selected
+      }
+    },
+  },
 
-function onMessageChange() {
-  updateSmsCount(message.value);
-}
-
-function onTemplateChange() {
-  const option = node.parameters.templateId.options.find((o: any) => o.value === templateId.value);
-  if (option && !message.value) {
-    message.value = option.content || '';
-    onMessageChange();
-  }
-}
-
-function onSenderChange() {}
+  watch: {
+    message(newValue) {
+      if (this.nodeData) this.nodeData.message = newValue;
+    },
+    templateId(newValue) {
+      if (this.nodeData) this.nodeData.templateId = newValue;
+    },
+  },
+};
 </script>
