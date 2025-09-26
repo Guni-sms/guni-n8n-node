@@ -1,4 +1,4 @@
-const { src, dest, task, series, parallel } = require('gulp');
+const { src, dest, task, series } = require('gulp');
 const merge = require('merge-stream');
 
 // Task to copy icons
@@ -19,14 +19,5 @@ task('build:icons', function () {
 	return merge(nodePng, nodeSvg, credPng, credSvg);
 });
 
-// Task to copy Vue files
-task('build:vue', function () {
-	return src('nodes/**/*.vue', { base: 'nodes', allowEmpty: true })
-		.pipe(dest('dist/nodes'));
-});
-
-// Final build task (tsc + icons + vue)
-task('build', series(
-	'build:icons',
-	'build:vue',
-));
+// Final build task (tsc + icons)
+task('build', series('build:icons'));
