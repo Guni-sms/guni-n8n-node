@@ -47,7 +47,7 @@ function calculateSmsParts(message: string) {
 	return { length: message.length, parts, encoding: isUnicode ? 'Unicode SMS' : 'GSM-7 SMS' };
 }
 
-export class GuniSMSMMS implements INodeType {
+export class Guni implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Guni SMS & MMS',
 		name: 'guni',
