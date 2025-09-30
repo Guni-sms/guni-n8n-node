@@ -105,10 +105,9 @@ export class Guni implements INodeType {
 			},
 			// === SMS Fields ===
 			{
-				displayName: 'Sender Name or ID',
+				displayName: 'Sender ID',
 				name: 'senderId',
 				type: 'options',
-				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 				typeOptions: { loadOptionsMethod: 'loadSmsSenderIds' },
 				default: '',
 				required: true,
@@ -146,19 +145,18 @@ export class Guni implements INodeType {
 			},
 			// === MMS Fields ===
 			{
-				displayName: 'Sender Name or ID',
+				displayName: 'Sender ID',
 				name: 'mmsSenderId',
 				type: 'options',
-				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 				typeOptions: { loadOptionsMethod: 'loadMmsSenderIds' },
 				default: '',
 				required: true,
 				displayOptions: { show: { operation: ['sendMms'] } },
 			},
 			{
-				displayName: 'Campaign Type',
+				displayName: 'MMS Type',
 				name: 'campaign_type',
-
+				description: 'Promotional is a campaign that is used to promote your business And Notification is a campaign that is used to notify your customers. (Opt-outs Included).',
 				type: 'options',
 				options: [
 					{ name: 'Promotional', value: 'promotional' },
