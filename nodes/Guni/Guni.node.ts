@@ -39,20 +39,42 @@ const UNICODE_GATEWAY_SMS_CONFIG = [
 	{ min: 797, max: 851, sms: 13 },
 ];
 
+// === Contact Filter ===
+function filterValidContacts(contacts: string[]): { valid: string[]; invalid: string[] } {
+	const valid: string[] = [];
+	const invalid: string[] = [];
+
+	contacts.forEach((c) => {
+		const sanitized = c.replace(/\D/g, ''); // remove non-digit characters
+
+		// Case 1: Already starts with 61 and 11 digits
+		if (/^61\d{9}$/.test(sanitized)) {
+			valid.push(sanitized);
+		}
+		// Case 2: Starts with 4 and exactly 9 digits → prepend 61
+		else if (/^4\d{8}$/.test(sanitized)) {
+			valid.push(`61${sanitized}`);
+		}
+		// Invalid otherwise
+		else {
+			invalid.push(sanitized);
+		}
+	});
+
+	return { valid, invalid };
+}
+
 function getFormattedName(): string {
 	const now = new Date();
-
 	const yyyy = now.getFullYear();
-	const mm = String(now.getMonth() + 1).padStart(2, '0'); // month is 0-based
+	const mm = String(now.getMonth() + 1).padStart(2, '0');
 	const dd = String(now.getDate()).padStart(2, '0');
 	const hh = String(now.getHours()).padStart(2, '0');
 	const min = String(now.getMinutes()).padStart(2, '0');
 	const ss = String(now.getSeconds()).padStart(2, '0');
-
 	const formatted = `${dd}-${mm}-${yyyy} ${hh}:${min}:${ss}`;
 	return `n8n ${formatted}`;
 }
-
 
 function calculateSmsParts(message: string) {
 	const isUnicode = /[^\x00-\x7F]/.test(message);
@@ -79,18 +101,8 @@ export class Guni implements INodeType {
 			subcategories: {
 				Messaging: ['SMS', 'MMS'],
 			},
-			alias: [
-				'guni',
-				'gunisms',
-				'gunimms',
-				'sms',
-				'mms',
-				'message',
-				'messaging',
-			],
-},
-
-
+			alias: ['guni', 'gunisms', 'gunimms', 'sms', 'mms', 'message', 'messaging'],
+		},
 		properties: [
 			{
 				displayName: 'Operation',
@@ -99,16 +111,16 @@ export class Guni implements INodeType {
 				noDataExpression: true,
 				options: [
 					{ name: 'Send SMS', value: 'sendSms', description: 'Send a text SMS', action: 'Send SMS' },
-					{ name: 'Send MMS', value: 'sendMms', description: 'Send an MMS with media', action: 'Send  MMS' },
+					{ name: 'Send MMS', value: 'sendMms', description: 'Send an MMS with media', action: 'Send MMS' },
 				],
 				default: 'sendSms',
 			},
-			// === SMS Fields ===
 			{
 				displayName: 'Sender Name or ID',
 				name: 'senderId',
 				type: 'options',
-				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+				description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 				typeOptions: { loadOptionsMethod: 'loadSmsSenderIds' },
 				default: '',
 				required: true,
@@ -117,7 +129,8 @@ export class Guni implements INodeType {
 			{
 				displayName: 'Message Type',
 				name: 'messageType',
-				description: 'Promotional is a campaign that is used to promote your business And Notification is a campaign that is used to notify your customers. (Opt-outs Included).',
+				description:
+					'Promotional is a campaign that is used to promote your business And Notification is a campaign that is used to notify your customers. (Opt-outs Included).',
 				type: 'options',
 				options: [
 					{ name: 'Promotional', value: 'promotional' },
@@ -129,7 +142,8 @@ export class Guni implements INodeType {
 			{
 				displayName: 'Message',
 				name: 'message',
-				description:'Maximum 1224 GSM Characters are allowed in an SMS <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Know More</a>',
+				description:
+					'Maximum 1224 GSM Characters are allowed in an SMS <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Know More</a>',
 				type: 'string',
 				typeOptions: { rows: 5 },
 				default: '',
@@ -139,27 +153,28 @@ export class Guni implements INodeType {
 			{
 				displayName: 'Allow Unicode',
 				name: 'allowUnicode',
-				description: 'Whether you want to send Unicode or not. Enable to send messages with Unicode characters. Disable to strip Unicode and send only standard text. <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Know More</a>',
+				description:
+					'Whether you want to send Unicode or not. Enable to send messages with Unicode characters. Disable to strip Unicode and send only standard text. <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Know More</a>',
 				type: 'boolean',
 				default: false,
 				displayOptions: { show: { operation: ['sendSms'] } },
 			},
-			// === MMS Fields ===
 			{
 				displayName: 'Sender Name or ID',
 				name: 'mmsSenderId',
 				type: 'options',
-				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+				description:
+					'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 				typeOptions: { loadOptionsMethod: 'loadMmsSenderIds' },
 				default: '',
 				required: true,
-  displayOptions: { show: { operation: ['sendMms'] } },
-},
-
+				displayOptions: { show: { operation: ['sendMms'] } },
+			},
 			{
 				displayName: 'MMS Type',
 				name: 'campaign_type',
-				description: 'Promotional is a campaign that is used to promote your business And Notification is a campaign that is used to notify your customers. (Opt-outs Included).',
+				description:
+					'Promotional is a campaign that is used to promote your business And Notification is a campaign that is used to notify your customers. (Opt-outs Included).',
 				type: 'options',
 				options: [
 					{ name: 'Promotional', value: 'promotional' },
@@ -172,11 +187,11 @@ export class Guni implements INodeType {
 			{
 				displayName: 'Message',
 				name: 'mmsMessage',
-				description:'Maximum 1500 GSM Characters are allowed in an MMS <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Know More</a>',
+				description:
+					'Maximum 1500 GSM Characters are allowed in an MMS <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Know More</a>',
 				type: 'string',
 				typeOptions: { rows: 5 },
 				default: '',
-
 				displayOptions: { show: { operation: ['sendMms'] } },
 			},
 			{
@@ -201,13 +216,12 @@ export class Guni implements INodeType {
 					'/auth/ac/sender-ids',
 					{} as any,
 					{} as any,
-					token
+					token,
 				);
-				console.log('Sender ID API Raw Response:', response);
 				if (!response?.data || !Array.isArray(response.data)) return [];
 				return response.data.map((s: { display: string; value: string }) => ({ name: s.display, value: s.value }));
 			},
-			
+
 			async loadMmsSenderIds(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const credentials = await this.getCredentials('guniApi');
 				const token = credentials.apiToken as string;
@@ -217,7 +231,7 @@ export class Guni implements INodeType {
 					'/auth/ac/sender-ids',
 					{} as any,
 					{} as any,
-					token
+					token,
 				);
 				if (!response?.data || !Array.isArray(response.data)) return [];
 				return response.data
@@ -238,7 +252,6 @@ export class Guni implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			try {
 				if (operation === 'sendSms') {
-					// === SMS Logic ===
 					const senderId = this.getNodeParameter('senderId', i) as string;
 					const messageType = this.getNodeParameter('messageType', i) as string;
 					const allowUnicode = this.getNodeParameter('allowUnicode', i) as boolean;
@@ -251,11 +264,25 @@ export class Guni implements INodeType {
 					if (!allowUnicode) nodeMessage = nodeMessage.replace(/[^\x00-\x7F]/g, '');
 
 					const inputContacts = (items[i].json?.body as any)?.contacts;
-					if (!inputContacts || !Array.isArray(inputContacts) || inputContacts.length === 0)
+					if (!inputContacts || !Array.isArray(inputContacts) || inputContacts.length === 0) {
 						throw new NodeOperationError(this.getNode(), `No contacts found in input [item ${i}]`);
+					}
 
-					// === Sender type detection ===
-					const allSendersResponse = await guniApiRequest.call(this, 'GET', '/auth/ac/sender-ids', {} as any, {} as any, token);
+					// ✅ filter valid/invalid contacts
+					const { valid: finalContacts, invalid: invalidContacts } = filterValidContacts(inputContacts);
+					if (finalContacts.length === 0) {
+						throw new NodeOperationError(this.getNode(), `No valid contacts found [item ${i}]`);
+					}
+
+					// Sender type
+					const allSendersResponse = await guniApiRequest.call(
+						this,
+						'GET',
+						'/auth/ac/sender-ids',
+						{} as any,
+						{} as any,
+						token,
+					);
 					const allSenders = Array.isArray(allSendersResponse?.data) ? allSendersResponse.data : [];
 					const selectedSender = allSenders.find((s: any) => s.value === senderId);
 					const senderDisplay = (selectedSender?.display || '').toLowerCase();
@@ -266,7 +293,6 @@ export class Guni implements INodeType {
 					else if (/shared/i.test(senderDisplay)) senderType = 'shared';
 					else if (/business/i.test(senderDisplay)) senderType = 'business';
 
-					// === Opt-out & preview message ===
 					let optout = false;
 					let replyStopToOptOut = false;
 					let previewMessage = nodeMessage;
@@ -285,12 +311,12 @@ export class Guni implements INodeType {
 							default:
 								optout = true;
 								replyStopToOptOut = false;
-								if (!nodeMessage.includes('stopsms.co/u')) previewMessage += '  stopsms.co/u######';
+								if (!nodeMessage.includes('stopsms.co/u'))
+									previewMessage += '  stopsms.co/u######';
 								extraLength = 20;
 						}
 					}
 
-					// === SMS parts ===
 					const smsInfo = calculateSmsParts(nodeMessage);
 					smsInfo.length += extraLength;
 
@@ -301,18 +327,27 @@ export class Guni implements INodeType {
 						camp_type: 'sms',
 						optout,
 						replyStopToOptOut,
-						contacts: inputContacts,
+						contacts: finalContacts,
 						unsubscribe: 0,
-						totalContacts: inputContacts.length,
+						totalContacts: finalContacts.length,
 						message: nodeMessage,
 						saved: false,
 					};
 
-					const response = await guniApiRequest.call(this, 'POST', '/gateway/bulk?mode=Mobile', requestBody, {} as any, token);
+					const response = await guniApiRequest.call(
+						this,
+						'POST',
+						'/gateway/bulk?mode=Mobile',
+						requestBody,
+						{} as any,
+						token,
+					);
 
 					returnData.push({
 						json: {
 							success: true,
+							sentTo: finalContacts,
+							invalidContacts,
 							message: nodeMessage,
 							messageLength: smsInfo.length,
 							parts: smsInfo.parts,
@@ -326,13 +361,14 @@ export class Guni implements INodeType {
 						},
 					});
 				} else if (operation === 'sendMms') {
-					// === MMS Logic ===
 					const senderId = this.getNodeParameter('mmsSenderId', i) as string;
 					const campaign_type = this.getNodeParameter('campaign_type', i) as string;
 
 					const json = items[i].json as any;
 					const message =
-						json.mmsMessage ?? json.body?.message ?? (this.getNodeParameter('mmsMessage', i) as string);
+						json.mmsMessage ??
+						json.body?.message ??
+						(this.getNodeParameter('mmsMessage', i) as string);
 					const mediaUrl =
 						json.mediaUrl ?? json.body?.media ?? (this.getNodeParameter('mediaUrl', i) as string);
 
@@ -348,11 +384,18 @@ export class Guni implements INodeType {
 						throw new NodeOperationError(this.getNode(), `No contacts found in input data [item ${i}]`);
 					}
 
-					const finalContacts = JSON.stringify(inputContacts);
+					// ✅ filter valid/invalid contacts
+					const { valid: finalContacts, invalid: skippedContacts } = filterValidContacts(inputContacts);
+					if (finalContacts.length === 0) {
+						throw new NodeOperationError(this.getNode(), `No valid contacts found [item ${i}]`);
+					}
+
+					const finalContactsStr = JSON.stringify(finalContacts);
 
 					let previewMessage = message;
 					if (campaign_type === 'promotional') {
-						if (!previewMessage.includes('Reply STOP')) previewMessage += '  Reply STOP to opt-out';
+						if (!previewMessage.includes('Reply STOP'))
+							previewMessage += '  Reply STOP to opt-out';
 					}
 
 					const form = new FormData();
@@ -360,7 +403,7 @@ export class Guni implements INodeType {
 					form.append('message', message);
 					form.append('deliveredMessage', previewMessage);
 					form.append('sender', senderId);
-					form.append('contacts', finalContacts);
+					form.append('contacts', finalContactsStr);
 					form.append('name', getFormattedName());
 					form.append('campaignType', campaign_type);
 					form.append('replyStopToOptOut', campaign_type === 'promotional' ? 'true' : 'false');
@@ -378,6 +421,7 @@ export class Guni implements INodeType {
 						json: {
 							success: true,
 							sentTo: finalContacts,
+							skippedContacts,
 							originalMessage: message,
 							deliveredMessage: previewMessage,
 							messageLength: previewMessage.length,
