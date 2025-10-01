@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-guni",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "n8n community node for sending SMS and MMS using Guni API",
   "keywords": [
     "n8n-community-node-package",
