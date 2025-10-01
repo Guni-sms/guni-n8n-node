@@ -39,30 +39,45 @@ const UNICODE_GATEWAY_SMS_CONFIG = [
 	{ min: 797, max: 851, sms: 13 },
 ];
 
-// === Contact Filter ===
 function filterValidContacts(contacts: string[]): { valid: string[]; invalid: string[] } {
 	const valid: string[] = [];
 	const invalid: string[] = [];
 
 	contacts.forEach((c) => {
-		const sanitized = c.replace(/\D/g, ''); // remove non-digit characters
+		// Remove all non-digits (spaces, +, etc.)
+		let sanitized = c.replace(/\D/g, '');
 
-		// Case 1: Already starts with 61 and 11 digits
+		// Remove leading "00" (international dialing prefix)
+		if (sanitized.startsWith('00')) {
+			sanitized = sanitized.substring(2);
+		}
+
+		// Fix cases like +6104... → should become 614...
+		if (sanitized.startsWith('610')) {
+			sanitized = '61' + sanitized.substring(3);
+		}
+
+		// ✅ Case 1: Already in correct international format (61XXXXXXXXX)
 		if (/^61\d{9}$/.test(sanitized)) {
 			valid.push(sanitized);
 		}
-		// Case 2: Starts with 4 and exactly 9 digits → prepend 61
-		else if (/^4\d{8}$/.test(sanitized)) {
-			valid.push(`61${sanitized}`);
+		// ✅ Case 2: Local format with 0 (e.g. 04XXXXXXXX → 61XXXXXXXXX)
+		else if (/^0?4\d{8}$/.test(sanitized)) {
+			valid.push('61' + sanitized.replace(/^0/, ''));
 		}
-		// Invalid otherwise
+		// ✅ Case 3: Just starts with 4XXXXXXXXX → add 61
+		else if (/^4\d{8}$/.test(sanitized)) {
+			valid.push('61' + sanitized);
+		}
+		// ❌ Invalid numbers
 		else {
-			invalid.push(sanitized);
+			invalid.push(c);
 		}
 	});
 
 	return { valid, invalid };
 }
+
 
 function getFormattedName(): string {
 	const now = new Date();
