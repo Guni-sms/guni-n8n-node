@@ -1,21 +1,21 @@
 # n8n Guni SMS Node
 
-An n8n node for sending SMS And MMS via the Guni API.
+A Guni node for sending as well as receivng SMS And MMS via the Guni API.
 
 ## Features
 
- Send promotional or notification SMS
+Send promotional or notification SMS
 
- Send promotional or notification MMS
- 
- Dynamic sender IDs loaded from your Guni account
+Send promotional or notification MMS
+
+Receive SMS or MMS
 
 ## Installation
 
 Install from npm:
 
 ```
-bash:
+bash or powershell:
 npm install n8n-nodes-guni-sms-mms
 ```
 
@@ -27,17 +27,17 @@ SMS
 
 Send SMS – Send messages to one or multiple phone numbers.
 
-Choose Message Type – Select Promotional or Notification.
+Campaign Type – Promotional or Notification.
 
-Sender ID – Select Sender ID from Your Sender Id list in Node.
+Sender ID – Sender ID from Your Sender Id list in Node.
 
 MMS
 
 Send MMS – Send multimedia messages with a media URL.
 
-Campaign Type – Select Promotional or Notification.
+Campaign Type – Promotional or Notification.
 
-Sender ID – Select Sender ID from Your Sender Id list in Node.
+Sender ID – Sender ID from Your Sender Id list in Node.
 
 
 ## Credentials
@@ -45,8 +45,10 @@ Sender ID – Select Sender ID from Your Sender Id list in Node.
 To use this node, you need a Guni API token.
 
 Sign up for a Guni account.
+* [Didn't have account? Want to SignUp](https://app.gunisms.com.au/signup)
 
 Generate an API token from your Guni dashboard.
+* [Check Here How to get API token from your Guni dashboard.](https://help.gunisms.com.au/kb/how-to-generate-api-token/)
 
 Add a new credential in n8n:
 
@@ -60,9 +62,6 @@ The node automatically validates the token when saving.
 
 Minimum n8n version: 2.0.0
 
-Tested against: 2.1.0, 2.2.0
-
-No known version incompatibilities.
 
 ## Usage
 
@@ -105,7 +104,7 @@ Execute the workflow to send SMS or MMS.
 
 ## Version history
 
-v0.1.0 – Initial release. Supports sending SMS And MMS via Guni API with dynamic sender IDs and message type selection.
+v1.0.2 – Initial release. Supports sending as well as receiving SMS And MMS via Guni API with dynamic sender IDs and message type selection.
 
 
  

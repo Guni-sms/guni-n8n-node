@@ -127,7 +127,7 @@ export class Guni implements INodeType {
 				displayOptions: { show: { operation: ['sendSms'] } },
 			},
 			{
-				displayName: 'Message Type',
+				displayName: 'Campaign Type',
 				name: 'messageType',
 				description:
 					'Promotional is a campaign that is used to promote your business And Notification is a campaign that is used to notify your customers. (Opt-outs Included).',
@@ -136,7 +136,7 @@ export class Guni implements INodeType {
 					{ name: 'Promotional', value: 'promotional' },
 					{ name: 'Notification', value: 'notification' },
 				],
-				default: 'notification',
+				default: 'promotional',
 				displayOptions: { show: { operation: ['sendSms'] } },
 			},
 			{
@@ -171,7 +171,7 @@ export class Guni implements INodeType {
 				displayOptions: { show: { operation: ['sendMms'] } },
 			},
 			{
-				displayName: 'MMS Type',
+				displayName: 'Campaign Type',
 				name: 'campaign_type',
 				description:
 					'Promotional is a campaign that is used to promote your business And Notification is a campaign that is used to notify your customers. (Opt-outs Included).',
@@ -191,6 +191,7 @@ export class Guni implements INodeType {
 					'Maximum 1500 GSM Characters are allowed in an MMS <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Know More</a>',
 				type: 'string',
 				typeOptions: { rows: 5 },
+				required: true,
 				default: '',
 				displayOptions: { show: { operation: ['sendMms'] } },
 			},
@@ -199,6 +200,7 @@ export class Guni implements INodeType {
 				name: 'mediaUrl',
 				type: 'string',
 				default: '',
+				required: true,
 				placeholder: 'Place Your Media URL here.',
 				displayOptions: { show: { operation: ['sendMms'] } },
 			},
