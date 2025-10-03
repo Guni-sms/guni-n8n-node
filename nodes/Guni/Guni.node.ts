@@ -427,7 +427,7 @@ export class Guni implements INodeType {
 
 					const requestOptions: IHttpRequestOptions = {
 						method: 'POST',
-						url: 'https://apit.gunisms.com.au/api/v1/gatewaymms/bulk',
+						url: 'https://api.gunisms.com.au/api/v1/gatewaymms/bulk',
 						headers: { Authorization: `Bearer ${token}`, ...form.getHeaders() },
 						body: form,
 					};

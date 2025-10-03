@@ -11,7 +11,7 @@ export async function guniApiRequest(
 	query: IDataObject = {},
 	apiKey: string,
 ): Promise<any> {
-	const url = `https://apit.gunisms.com.au/api/v1${endpoint}`;
+	const url = `https://api.gunisms.com.au/api/v1${endpoint}`;
 
 	const options: any = {
 		method,

@@ -24,7 +24,7 @@ export class GuniApi implements ICredentialType {
     test: ICredentialTestRequest = {
         request: {
             method: 'GET',
-            url: 'https://apit.gunisms.com.au/api/v1/auth/ac/sender-ids',
+            url: 'https://api.gunisms.com.au/api/v1/auth/ac/sender-ids',
             headers: {
                 'guni-token': '={{$credentials.apiToken}}',
                 Authorization: 'Bearer {{$credentials.apiToken}}',
