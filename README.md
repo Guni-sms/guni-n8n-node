@@ -1,4 +1,4 @@
-# n8n Guni SMS Node
+# n8n Guni Node
 
 A Guni node for sending as well as receivng SMS And MMS via the Guni API.
 
@@ -47,6 +47,9 @@ To use this node, you need a Guni API token.
 Sign up for a Guni account.
 * [Didn't have account? Want to SignUp](https://app.gunisms.com.au/signup)
 
+Want to send using your Business name ?
+* [Here is how you can get one.](https://help.gunisms.com.au/kb/set-sender-id/)
+
 Generate an API token from your Guni dashboard.
 * [Check Here How to get API token from your Guni dashboard.](https://help.gunisms.com.au/kb/how-to-generate-api-token/)
 
@@ -69,7 +72,7 @@ Add the Guni SMS or Guni MMS node to your workflow.
 
 Select your Sender ID from your account.
 
-Choose Message Type.
+Choose Campaign Type.
 
 Enter your SMS or MMS content in the Message field or it will take it from previous node also.
 
@@ -79,7 +82,7 @@ Provide input data JSON with contacts :
 ```
 {
   "body": {
-    "contacts": ["61466644455", "61411223344"],
+    "contacts": ["61439554019", "61439543139"],
     "message": "Hello test SMS"
   }
 }
@@ -88,7 +91,7 @@ Provide input data JSON with contacts :
 ```
 {
   "body": {
-    "contacts": ["61466644455", "61411223344"],
+    "contacts": ["61439543031", "61439551969"],
     "message": "Hello test MMS"
      "media": "https://example.com/myImage.jpg",
   }

@@ -25,7 +25,8 @@
     "credentials/**/*",
     "nodes/**/*",
     "nodes/**/*.json",
-    "nodes/**/*.vue",
+
+
     "package.json",
     "images.d.ts"
   ]

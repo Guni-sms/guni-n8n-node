@@ -5,7 +5,7 @@ import {
 } from 'n8n-workflow';
 
 export class GuniApi implements ICredentialType {
-    name = 'guniApi';	
+    name = 'guniApi';
     displayName = 'Guni API';
     documentationUrl = 'https://docs.gunisms.com.au/api';
 
