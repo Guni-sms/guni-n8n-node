@@ -51,10 +51,5 @@
   },
   "peerDependencies": {
     "n8n-workflow": "*"
-  },
-  "dependencies": {
-    "dnpm": "^0.1.13",
-    "dotenv": "^17.2.3",
-    "install": "^0.13.0"
   }
 }
