@@ -16,7 +16,7 @@ Install from npm:
 
 ```
 bash or powershell:
-npm install n8n-nodes-guni-sms-mms
+npm install n8n-nodes-guni
 ```
 
 ## Operations
