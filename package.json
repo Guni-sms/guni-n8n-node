@@ -50,6 +50,6 @@
     "typescript": "~4.8.4"
   },
   "peerDependencies": {
-    "n8n-workflow": "*"
+    "n8n-workflow": "^2.242.0"
   }
 }

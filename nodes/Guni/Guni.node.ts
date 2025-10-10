@@ -5,7 +5,6 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	INodePropertyOptions,
-	NodeConnectionType,
 	NodeOperationError,
 	IHttpRequestOptions,
 } from 'n8n-workflow';
@@ -108,8 +107,8 @@ export class Guni implements INodeType {
 		version: 1,
 		description: 'Send SMS or MMS via Guni API',
 		defaults: { name: 'Guni' },
-		inputs: [NodeConnectionType.Main],
-		outputs: [NodeConnectionType.Main],
+		inputs: ['main'],
+		outputs: ['main'],
 		credentials: [{ name: 'guniApi', required: true }],
 		codex: {
 			categories: ['Messaging'],
