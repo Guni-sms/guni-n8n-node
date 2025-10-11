@@ -7,9 +7,9 @@ import {
 	INodePropertyOptions,
 	NodeOperationError,
 	IHttpRequestOptions,
+	IDataObject,
 } from 'n8n-workflow';
 import { guniApiRequest } from './GuniApi.helper';
-const FormData = require('form-data');
 
 // === SMS Configs ===
 const ENGLISH_GATEWAY_SMS_CONFIG = [
@@ -76,7 +76,6 @@ function filterValidContacts(contacts: string[]): { valid: string[]; invalid: st
 
 	return { valid, invalid };
 }
-
 
 function getFormattedName(): string {
 	const now = new Date();
@@ -230,8 +229,8 @@ export class Guni implements INodeType {
 					this as unknown as IExecuteFunctions,
 					'GET',
 					'/auth/ac/sender-ids',
-					{} as any,
-					{} as any,
+					{} as IDataObject,
+					{} as IDataObject,
 					token,
 				);
 				if (!response?.data || !Array.isArray(response.data)) return [];
@@ -245,8 +244,8 @@ export class Guni implements INodeType {
 					this as unknown as IExecuteFunctions,
 					'GET',
 					'/auth/ac/sender-ids',
-					{} as any,
-					{} as any,
+					{} as IDataObject,
+					{} as IDataObject,
 					token,
 				);
 				if (!response?.data || !Array.isArray(response.data)) return [];
@@ -295,8 +294,8 @@ export class Guni implements INodeType {
 						this,
 						'GET',
 						'/auth/ac/sender-ids',
-						{} as any,
-						{} as any,
+						{} as IDataObject,
+						{} as IDataObject,
 						token,
 					);
 					const allSenders = Array.isArray(allSendersResponse?.data) ? allSendersResponse.data : [];
@@ -355,7 +354,7 @@ export class Guni implements INodeType {
 						'POST',
 						'/gateway/bulk?mode=Mobile',
 						requestBody,
-						{} as any,
+						{} as IDataObject,
 						token,
 					);
 
@@ -414,21 +413,23 @@ export class Guni implements INodeType {
 							previewMessage += '  Reply STOP to opt-out';
 					}
 
-					const form = new FormData();
-					form.append('media', mediaUrl);
-					form.append('message', message);
-					form.append('deliveredMessage', previewMessage);
-					form.append('sender', senderId);
-					form.append('contacts', finalContactsStr);
-					form.append('name', getFormattedName());
-					form.append('campaignType', campaign_type);
-					form.append('replyStopToOptOut', campaign_type === 'promotional' ? 'true' : 'false');
-
+					// Use multipart/form-data via httpRequest
 					const requestOptions: IHttpRequestOptions = {
 						method: 'POST',
 						url: 'https://api.gunisms.com.au/api/v1/gatewaymms/bulk',
-						headers: { Authorization: `Bearer ${token}`, ...form.getHeaders() },
-						body: form,
+						headers: {
+							'Authorization': `Bearer ${token}`,
+						},
+						body: {
+							media: mediaUrl,
+							message: message,
+							deliveredMessage: previewMessage,
+							sender: senderId,
+							contacts: finalContactsStr,
+							name: getFormattedName(),
+							campaignType: campaign_type,
+							replyStopToOptOut: campaign_type === 'promotional' ? 'true' : 'false',
+						},
 					};
 
 					const response = await this.helpers.httpRequest(requestOptions);

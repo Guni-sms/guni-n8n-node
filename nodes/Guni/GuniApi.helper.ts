@@ -1,4 +1,4 @@
-import { IExecuteFunctions, IDataObject } from 'n8n-workflow';
+import { IExecuteFunctions, IDataObject, IHttpRequestOptions } from 'n8n-workflow';
 
 /**
  * Makes a request to the Guni API using n8n helpers
@@ -13,7 +13,7 @@ export async function guniApiRequest(
 ): Promise<any> {
 	const url = `https://api.gunisms.com.au/api/v1${endpoint}`;
 
-	const options: any = {
+	const options: IHttpRequestOptions = {
 		method,
 		url,
 		headers: {
@@ -32,7 +32,7 @@ export async function guniApiRequest(
 	}
 
 	try {
-		return await this.helpers.request!(options);
+		return await this.helpers.httpRequest(options);
 	} catch (error: any) {
 		const message =
 			error.response?.body?.message ||
