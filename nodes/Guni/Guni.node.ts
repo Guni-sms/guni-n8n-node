@@ -123,8 +123,18 @@ export class Guni implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				options: [
-					{ name: 'Send SMS', value: 'sendSms', description: 'Send a text SMS', action: 'Send SMS' },
-					{ name: 'Send MMS', value: 'sendMms', description: 'Send an MMS with media', action: 'Send MMS' },
+					{
+						name: 'Send SMS',
+						value: 'sendSms',
+						description: 'Send a text SMS',
+						action: 'Send SMS',
+					},
+					{
+						name: 'Send MMS',
+						value: 'sendMms',
+						description: 'Send an MMS with media',
+						action: 'Send MMS',
+					},
 				],
 				default: 'sendSms',
 			},
@@ -234,7 +244,10 @@ export class Guni implements INodeType {
 					token,
 				);
 				if (!response?.data || !Array.isArray(response.data)) return [];
-				return response.data.map((s: { display: string; value: string }) => ({ name: s.display, value: s.value }));
+				return response.data.map((s: { display: string; value: string }) => ({
+					name: s.display,
+					value: s.value,
+				}));
 			},
 
 			async loadMmsSenderIds(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
@@ -284,7 +297,8 @@ export class Guni implements INodeType {
 					}
 
 					// ✅ filter valid/invalid contacts
-					const { valid: finalContacts, invalid: invalidContacts } = filterValidContacts(inputContacts);
+					const { valid: finalContacts, invalid: invalidContacts } =
+						filterValidContacts(inputContacts);
 					if (finalContacts.length === 0) {
 						throw new NodeOperationError(this.getNode(), `No valid contacts found [item ${i}]`);
 					}
@@ -319,15 +333,15 @@ export class Guni implements INodeType {
 							case 'dedicated':
 								optout = false;
 								replyStopToOptOut = true;
-								if (!nodeMessage.includes('Reply STOP')) previewMessage += '   Reply STOP to optout';
+								if (!nodeMessage.includes('Reply STOP'))
+									previewMessage += '   Reply STOP to optout';
 								extraLength = 23;
 								break;
 							case 'personal':
 							default:
 								optout = true;
 								replyStopToOptOut = false;
-								if (!nodeMessage.includes('stopsms.co/u'))
-									previewMessage += '  stopsms.co/u######';
+								if (!nodeMessage.includes('stopsms.co/u')) previewMessage += '  stopsms.co/u######';
 								extraLength = 20;
 						}
 					}
@@ -396,11 +410,15 @@ export class Guni implements INodeType {
 
 					const inputContacts = json.body?.contacts;
 					if (!inputContacts || !Array.isArray(inputContacts) || inputContacts.length === 0) {
-						throw new NodeOperationError(this.getNode(), `No contacts found in input data [item ${i}]`);
+						throw new NodeOperationError(
+							this.getNode(),
+							`No contacts found in input data [item ${i}]`,
+						);
 					}
 
 					// ✅ filter valid/invalid contacts
-					const { valid: finalContacts, invalid: skippedContacts } = filterValidContacts(inputContacts);
+					const { valid: finalContacts, invalid: skippedContacts } =
+						filterValidContacts(inputContacts);
 					if (finalContacts.length === 0) {
 						throw new NodeOperationError(this.getNode(), `No valid contacts found [item ${i}]`);
 					}
@@ -409,8 +427,7 @@ export class Guni implements INodeType {
 
 					let previewMessage = message;
 					if (campaign_type === 'promotional') {
-						if (!previewMessage.includes('Reply STOP'))
-							previewMessage += '  Reply STOP to opt-out';
+						if (!previewMessage.includes('Reply STOP')) previewMessage += '  Reply STOP to opt-out';
 					}
 
 					// Use multipart/form-data via httpRequest
@@ -418,7 +435,7 @@ export class Guni implements INodeType {
 						method: 'POST',
 						url: 'https://api.gunisms.com.au/api/v1/gatewaymms/bulk',
 						headers: {
-							'Authorization': `Bearer ${token}`,
+							Authorization: `Bearer ${token}`,
 						},
 						body: {
 							media: mediaUrl,

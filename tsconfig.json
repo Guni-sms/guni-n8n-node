@@ -25,6 +25,7 @@
     "credentials/**/*",
     "nodes/**/*",
     "package.json",
-    "images.d.ts"
+    "images.d.ts",
+    "*.ts"
   ]
 }

@@ -35,10 +35,7 @@ export async function guniApiRequest(
 		return await this.helpers.httpRequest(options);
 	} catch (error: any) {
 		const message =
-			error.response?.body?.message ||
-			error.response?.body ||
-			error.message ||
-			'Unknown API error';
+			error.response?.body?.message || error.response?.body || error.message || 'Unknown API error';
 		throw new Error(`Guni API Request Failed: ${message}`);
 	}
 }
