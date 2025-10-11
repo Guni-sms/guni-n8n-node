@@ -4,7 +4,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "target": "es2019",
-    "lib": ["es2019", "es2020", "es2022","DOM" ],
+    "lib": ["es2019", "es2020", "es2022", "DOM"],
     "removeComments": true,
     "useUnknownInCatchVariables": false,
     "forceConsistentCasingInFileNames": true,
@@ -24,9 +24,6 @@
   "include": [
     "credentials/**/*",
     "nodes/**/*",
-    "nodes/**/*.json",
-
-
     "package.json",
     "images.d.ts"
   ]
