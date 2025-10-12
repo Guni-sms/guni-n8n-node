@@ -22,7 +22,7 @@
   "bugs": {
     "url": "https://github.com/Guni-sms/guni-n8n-node/issues"
   },
-  "main": "dist/nodes/Guni/Guni.node.js",
+  "main": "index.js",
   "scripts": {
     "build": "tsc && gulp build",
     "dev": "tsc --watch",
