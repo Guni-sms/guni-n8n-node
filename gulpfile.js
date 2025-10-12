@@ -30,5 +30,12 @@ task('build:package-json', function (done) {
 	done();
 });
 
+// Create dist/index.js entry point
+task('build:index', function (done) {
+	const content = '// Empty export - n8n will use package.json n8n field\nmodule.exports = {};\n';
+	fs.writeFileSync('./dist/index.js', content);
+	done();
+});
+
 // Final build
-task('build', series('build:icons', 'build:package-json'));
+task('build', series('build:icons', 'build:package-json', 'build:index'));
