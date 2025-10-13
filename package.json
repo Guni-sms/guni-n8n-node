@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-guni",
-  "version": "2.0.12",
+  "version": "2.0.13",
   "description": "n8n community node for sending SMS and MMS using Guni API",
   "keywords": [
     "n8n-community-node-package",
@@ -22,9 +22,9 @@
   "bugs": {
     "url": "https://github.com/Guni-sms/guni-n8n-node/issues"
   },
-"engines": {
-  "node": ">=20.15"
-},
+  "engines": {
+    "node": ">=20.15"
+  },
   "main": "index.js",
   "scripts": {
     "build": "npx rimraf dist && tsc && gulp build",
