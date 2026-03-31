@@ -1,20 +1,14 @@
-const { src, dest, task, series } = require('gulp');
-const merge = require('merge-stream');
+const { src, dest, task, series, parallel } = require('gulp');
 const fs = require('fs');
 
-// Copy icons
-task('build:icons', function () {
-	const nodeSourceSvg = 'nodes/**/*.svg';
-	const nodeDest = 'dist/nodes';
-
-	const credSourceSvg = 'credentials/**/*.svg';
-	const credDest = 'dist/credentials';
-
-	const nodeSvg = src(nodeSourceSvg).pipe(dest(nodeDest));
-	const credSvg = src(credSourceSvg).pipe(dest(credDest));
-
-	return merge(nodeSvg, credSvg);
-});
+// Copy icons (use gulp parallel — merge-stream breaks with Gulp 5 / streamx on Node 22+)
+task(
+	'build:icons',
+	parallel(
+		() => src('nodes/**/*.svg').pipe(dest('dist/nodes')),
+		() => src('credentials/**/*.svg').pipe(dest('dist/credentials')),
+	),
+);
 
 // Create minimal dist/package.json for n8n
 task('build:package-json', function (done) {
