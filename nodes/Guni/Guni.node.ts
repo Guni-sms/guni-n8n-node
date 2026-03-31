@@ -6,7 +6,6 @@ import {
 	INodeTypeDescription,
 	INodePropertyOptions,
 	NodeOperationError,
-	IHttpRequestOptions,
 	IDataObject,
 } from 'n8n-workflow';
 import { guniApiRequest } from './GuniApi.helper';
@@ -97,11 +96,39 @@ function calculateSmsParts(message: string) {
 	return { length: message.length, parts, encoding: isUnicode ? 'Unicode SMS' : 'GSM-7 SMS' };
 }
 
+/** Expected `items[].json` shape for SMS/MMS (expressions may add other keys). */
+interface GuniItemBody {
+	contacts?: unknown;
+	message?: string;
+	media?: string;
+}
+
+interface GuniItemJson extends IDataObject {
+	message?: string;
+	mmsMessage?: string;
+	mediaUrl?: string;
+	body?: GuniItemBody;
+}
+
+/**
+ * Preserve upstream [item linking](https://docs.n8n.io/integrations/creating-nodes/build/reference/paired-items/) when n8n already set `pairedItem`.
+ */
+function resolvePairedItem(
+	item: INodeExecutionData,
+	itemIndex: number,
+): NonNullable<INodeExecutionData['pairedItem']> {
+	if (item.pairedItem === undefined) {
+		return { item: itemIndex };
+	}
+	return item.pairedItem;
+}
+
 export class Guni implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Guni SMS & MMS',
 		name: 'guni',
-		group: ['transform'],
+		subtitle: '={{$parameter["operation"]}}',
+		group: [],
 		icon: 'file:guni.svg',
 		version: 1,
 		description: 'Send SMS or MMS via Guni API',
@@ -123,18 +150,18 @@ export class Guni implements INodeType {
 				type: 'options',
 				noDataExpression: true,
 				options: [
-					{
-						name: 'Send SMS',
-						value: 'sendSms',
-						description: 'Send a text SMS',
-						action: 'Send SMS',
-					},
-					{
-						name: 'Send MMS',
-						value: 'sendMms',
-						description: 'Send an MMS with media',
-						action: 'Send MMS',
-					},
+				{
+					name: 'Send SMS',
+					value: 'sendSms',
+					description: 'Send a text message via SMS',
+					action: 'Send a SMS',
+				},
+				{
+					name: 'Send MMS',
+					value: 'sendMms',
+					description: 'Send a multimedia message via MMS',
+					action: 'Send a MMS',
+				},
 				],
 				default: 'sendSms',
 			},
@@ -149,39 +176,39 @@ export class Guni implements INodeType {
 				required: true,
 				displayOptions: { show: { operation: ['sendSms'] } },
 			},
-			{
-				displayName: 'Campaign Type',
-				name: 'messageType',
-				description:
-					'Promotional is a campaign that is used to promote your business And Notification is a campaign that is used to notify your customers. (Opt-outs Included).',
-				type: 'options',
-				options: [
-					{ name: 'Promotional', value: 'promotional' },
-					{ name: 'Notification', value: 'notification' },
-				],
-				default: 'promotional',
-				displayOptions: { show: { operation: ['sendSms'] } },
-			},
-			{
-				displayName: 'Message',
-				name: 'message',
-				description:
-					'Maximum 1224 GSM Characters are allowed in an SMS <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Know More</a>',
-				type: 'string',
-				typeOptions: { rows: 5 },
-				default: '',
-				required: true,
-				displayOptions: { show: { operation: ['sendSms'] } },
-			},
-			{
-				displayName: 'Allow Unicode',
-				name: 'allowUnicode',
-				description:
-					'Whether you want to send Unicode or not. Enable to send messages with Unicode characters. Disable to strip Unicode and send only standard text. <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Know More</a>',
-				type: 'boolean',
-				default: false,
-				displayOptions: { show: { operation: ['sendSms'] } },
-			},
+		{
+			displayName: 'Campaign Type',
+			name: 'messageType',
+			description:
+				'Promotional campaigns promote your business. Notification campaigns notify your customers (opt-outs included).',
+			type: 'options',
+			options: [
+				{ name: 'Promotional', value: 'promotional' },
+				{ name: 'Notification', value: 'notification' },
+			],
+			default: 'promotional',
+			displayOptions: { show: { operation: ['sendSms'] } },
+		},
+		{
+			displayName: 'Message',
+			name: 'message',
+			description:
+				'The text content of the SMS. Maximum 1224 GSM characters. <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Learn more</a>.',
+			type: 'string',
+			typeOptions: { rows: 5 },
+			default: '',
+			required: true,
+			displayOptions: { show: { operation: ['sendSms'] } },
+		},
+		{
+			displayName: 'Allow Unicode',
+			name: 'allowUnicode',
+			description:
+				'Whether to allow Unicode characters in the message. When disabled, Unicode characters are stripped and only standard GSM text is sent. <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Learn more</a>.',
+			type: 'boolean',
+			default: false,
+			displayOptions: { show: { operation: ['sendSms'] } },
+		},
 			{
 				displayName: 'Sender Name or ID',
 				name: 'mmsSenderId',
@@ -193,78 +220,71 @@ export class Guni implements INodeType {
 				required: true,
 				displayOptions: { show: { operation: ['sendMms'] } },
 			},
-			{
-				displayName: 'Campaign Type',
-				name: 'campaign_type',
-				description:
-					'Promotional is a campaign that is used to promote your business And Notification is a campaign that is used to notify your customers. (Opt-outs Included).',
-				type: 'options',
-				options: [
-					{ name: 'Promotional', value: 'promotional' },
-					{ name: 'Notification', value: 'notification' },
-				],
-				default: 'promotional',
-				required: true,
-				displayOptions: { show: { operation: ['sendMms'] } },
-			},
-			{
-				displayName: 'Message',
-				name: 'mmsMessage',
-				description:
-					'Maximum 1500 GSM Characters are allowed in an MMS <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Know More</a>',
-				type: 'string',
-				typeOptions: { rows: 5 },
-				required: true,
-				default: '',
-				displayOptions: { show: { operation: ['sendMms'] } },
-			},
-			{
-				displayName: 'Media URL',
-				name: 'mediaUrl',
-				type: 'string',
-				default: '',
-				required: true,
-				placeholder: 'Place Your Media URL here.',
-				displayOptions: { show: { operation: ['sendMms'] } },
-			},
+		{
+			displayName: 'Campaign Type',
+			name: 'campaign_type',
+			description:
+				'Promotional campaigns promote your business. Notification campaigns notify your customers (opt-outs included).',
+			type: 'options',
+			options: [
+				{ name: 'Promotional', value: 'promotional' },
+				{ name: 'Notification', value: 'notification' },
+			],
+			default: 'promotional',
+			required: true,
+			displayOptions: { show: { operation: ['sendMms'] } },
+		},
+		{
+			displayName: 'Message',
+			name: 'mmsMessage',
+			description:
+				'The text content of the MMS. Maximum 1500 GSM characters. <a href="https://help.gunisms.com.au/kb/how-many-characters-can-i-send-in-an-sms/">Learn more</a>.',
+			type: 'string',
+			typeOptions: { rows: 5 },
+			required: true,
+			default: '',
+			displayOptions: { show: { operation: ['sendMms'] } },
+		},
+		{
+			displayName: 'Media URL',
+			name: 'mediaUrl',
+			type: 'string',
+			default: '',
+			required: true,
+			description: 'URL of the media file to include in the MMS',
+			placeholder: 'e.g. https://example.com/image.png',
+			displayOptions: { show: { operation: ['sendMms'] } },
+		},
 		],
 	};
 
 	methods = {
 		loadOptions: {
 			async loadSmsSenderIds(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-				const credentials = await this.getCredentials('guniApi');
-				const token = credentials.apiToken as string;
-				const response = await guniApiRequest.call(
-					this as unknown as IExecuteFunctions,
+				const response = (await guniApiRequest.call(
+					this,
 					'GET',
 					'/auth/ac/sender-ids',
-					{} as IDataObject,
-					{} as IDataObject,
-					token,
-				);
+				)) as IDataObject;
 				if (!response?.data || !Array.isArray(response.data)) return [];
-				return response.data.map((s: { display: string; value: string }) => ({
+				const rows = response.data as Array<{ display: string; value: string }>;
+				return rows.map((s) => ({
 					name: s.display,
 					value: s.value,
 				}));
 			},
 
 			async loadMmsSenderIds(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-				const credentials = await this.getCredentials('guniApi');
-				const token = credentials.apiToken as string;
-				const response = await guniApiRequest.call(
-					this as unknown as IExecuteFunctions,
+				const response = (await guniApiRequest.call(
+					this,
 					'GET',
 					'/auth/ac/sender-ids',
-					{} as IDataObject,
-					{} as IDataObject,
-					token,
-				);
+				)) as IDataObject;
 				if (!response?.data || !Array.isArray(response.data)) return [];
-				return response.data
-					.filter((s: { display: string }) => /shared|dedicated/i.test(s.display.toLowerCase()))
-					.map((s: { display: string; value: string }) => ({ name: s.display, value: s.value }));
+				const rows = response.data as Array<{ display: string; value: string }>;
+				return rows
+					.filter((s) => /shared|dedicated/i.test(s.display.toLowerCase()))
+					.map((s) => ({ name: s.display, value: s.value }));
 			},
 		},
 	};
@@ -272,202 +292,225 @@ export class Guni implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
-		const credentials = await this.getCredentials('guniApi');
-		const token = credentials.apiToken as string;
 
 		const operation = this.getNodeParameter('operation', 0) as string;
 
 		for (let i = 0; i < items.length; i++) {
-			try {
-				if (operation === 'sendSms') {
-					const senderId = this.getNodeParameter('senderId', i) as string;
-					const messageType = this.getNodeParameter('messageType', i) as string;
-					const allowUnicode = this.getNodeParameter('allowUnicode', i) as boolean;
-					const inputJson = items[i].json as any;
-					let nodeMessage =
-						inputJson.message ??
-						inputJson.body?.message ??
-						(this.getNodeParameter('message', i) as string);
+			const pairedItem = resolvePairedItem(items[i], i);
 
-					if (!allowUnicode) nodeMessage = nodeMessage.replace(/[^\x00-\x7F]/g, '');
+			if (operation === 'sendSms') {
+				const senderId = this.getNodeParameter('senderId', i) as string;
+				const messageType = this.getNodeParameter('messageType', i) as string;
+				const allowUnicode = this.getNodeParameter('allowUnicode', i) as boolean;
+				const inputJson = items[i].json as GuniItemJson;
+				let nodeMessage =
+					inputJson.message ??
+					inputJson.body?.message ??
+					(this.getNodeParameter('message', i) as string);
 
-					const inputContacts = (items[i].json?.body as any)?.contacts;
-					if (!inputContacts || !Array.isArray(inputContacts) || inputContacts.length === 0) {
-						throw new NodeOperationError(this.getNode(), `No contacts found in input [item ${i}]`);
-					}
+				if (typeof nodeMessage !== 'string') {
+					nodeMessage = nodeMessage == null ? '' : String(nodeMessage);
+				}
+				if (!allowUnicode) nodeMessage = nodeMessage.replace(/[^\x00-\x7F]/g, '');
 
-					// ✅ filter valid/invalid contacts
-					const { valid: finalContacts, invalid: invalidContacts } =
-						filterValidContacts(inputContacts);
-					if (finalContacts.length === 0) {
-						throw new NodeOperationError(this.getNode(), `No valid contacts found [item ${i}]`);
-					}
-
-					// Sender type
-					const allSendersResponse = await guniApiRequest.call(
-						this,
-						'GET',
-						'/auth/ac/sender-ids',
-						{} as IDataObject,
-						{} as IDataObject,
-						token,
+				if (!nodeMessage.trim()) {
+					throw new NodeOperationError(
+						this.getNode(),
+						'Message is empty after resolving input and Unicode handling. Enable "Allow Unicode" or provide GSM text.',
+						{ itemIndex: i },
 					);
-					const allSenders = Array.isArray(allSendersResponse?.data) ? allSendersResponse.data : [];
-					const selectedSender = allSenders.find((s: any) => s.value === senderId);
-					const senderDisplay = (selectedSender?.display || '').toLowerCase();
+				}
 
-					let senderType = 'unknown';
-					if (/personal/i.test(senderDisplay)) senderType = 'personal';
-					else if (/dedicated/i.test(senderDisplay)) senderType = 'dedicated';
-					else if (/shared/i.test(senderDisplay)) senderType = 'shared';
-					else if (/business/i.test(senderDisplay)) senderType = 'business';
-
-					let optout = false;
-					let replyStopToOptOut = false;
-					let previewMessage = nodeMessage;
-					let extraLength = 0;
-
-					if (messageType === 'promotional') {
-						switch (senderType) {
-							case 'shared':
-							case 'dedicated':
-								optout = false;
-								replyStopToOptOut = true;
-								if (!nodeMessage.includes('Reply STOP'))
-									previewMessage += '   Reply STOP to optout';
-								extraLength = 23;
-								break;
-							case 'personal':
-							default:
-								optout = true;
-								replyStopToOptOut = false;
-								if (!nodeMessage.includes('stopsms.co/u')) previewMessage += '  stopsms.co/u######';
-								extraLength = 20;
-						}
-					}
-
-					const smsInfo = calculateSmsParts(nodeMessage);
-					smsInfo.length += extraLength;
-
-					const requestBody = {
-						name: getFormattedName(),
-						sender: senderId,
-						campaign_type: messageType,
-						camp_type: 'sms',
-						optout,
-						replyStopToOptOut,
-						contacts: finalContacts,
-						unsubscribe: 0,
-						totalContacts: finalContacts.length,
-						message: nodeMessage,
-						saved: false,
-					};
-
-					const response = await guniApiRequest.call(
-						this,
-						'POST',
-						'/gateway/bulk?mode=Mobile',
-						requestBody,
-						{} as IDataObject,
-						token,
-					);
-
-					returnData.push({
-						json: {
-							success: true,
-							sentTo: finalContacts,
-							invalidContacts,
-							message: nodeMessage,
-							messageLength: smsInfo.length,
-							parts: smsInfo.parts,
-							encoding: smsInfo.encoding,
-							unicodeDetected: /[^\x00-\x7F]/.test(nodeMessage),
-							unicodeAllowed: allowUnicode,
-							selectedSenderDisplay: selectedSender?.display,
-							senderType,
-							previewMessage,
-							response,
-						},
-					});
-				} else if (operation === 'sendMms') {
-					const senderId = this.getNodeParameter('mmsSenderId', i) as string;
-					const campaign_type = this.getNodeParameter('campaign_type', i) as string;
-
-					const json = items[i].json as any;
-					const message =
-						json.mmsMessage ??
-						json.body?.message ??
-						(this.getNodeParameter('mmsMessage', i) as string);
-					const mediaUrl =
-						json.mediaUrl ?? json.body?.media ?? (this.getNodeParameter('mediaUrl', i) as string);
-
-					if (!message || !mediaUrl) {
-						throw new NodeOperationError(
-							this.getNode(),
-							`Message or Media URL not found in input data or node parameters [item ${i}]`,
-						);
-					}
-
-					const inputContacts = json.body?.contacts;
-					if (!inputContacts || !Array.isArray(inputContacts) || inputContacts.length === 0) {
-						throw new NodeOperationError(
-							this.getNode(),
-							`No contacts found in input data [item ${i}]`,
-						);
-					}
-
-					// ✅ filter valid/invalid contacts
-					const { valid: finalContacts, invalid: skippedContacts } =
-						filterValidContacts(inputContacts);
-					if (finalContacts.length === 0) {
-						throw new NodeOperationError(this.getNode(), `No valid contacts found [item ${i}]`);
-					}
-
-					const finalContactsStr = JSON.stringify(finalContacts);
-
-					let previewMessage = message;
-					if (campaign_type === 'promotional') {
-						if (!previewMessage.includes('Reply STOP')) previewMessage += '  Reply STOP to opt-out';
-					}
-
-					// Use multipart/form-data via httpRequest
-					const requestOptions: IHttpRequestOptions = {
-						method: 'POST',
-						url: 'https://api.gunisms.com.au/api/v1/gatewaymms/bulk',
-						headers: {
-							Authorization: `Bearer ${token}`,
-						},
-						body: {
-							media: mediaUrl,
-							message: message,
-							deliveredMessage: previewMessage,
-							sender: senderId,
-							contacts: finalContactsStr,
-							name: getFormattedName(),
-							campaignType: campaign_type,
-							replyStopToOptOut: campaign_type === 'promotional' ? 'true' : 'false',
-						},
-					};
-
-					const response = await this.helpers.httpRequest(requestOptions);
-
-					returnData.push({
-						json: {
-							success: true,
-							sentTo: finalContacts,
-							skippedContacts,
-							originalMessage: message,
-							deliveredMessage: previewMessage,
-							messageLength: previewMessage.length,
-							media: mediaUrl,
-							campaign_type,
-							replyStopToOptOut: campaign_type === 'promotional',
-							response,
-						},
+				const inputContacts = inputJson.body?.contacts;
+				if (!inputContacts || !Array.isArray(inputContacts) || inputContacts.length === 0) {
+					throw new NodeOperationError(this.getNode(), `No contacts found in input [item ${i}]`, {
+						itemIndex: i,
 					});
 				}
-			} catch (error) {
-				returnData.push({ json: { success: false, error: (error as Error).message } });
+
+				// ✅ filter valid/invalid contacts
+				const { valid: finalContacts, invalid: invalidContacts } =
+					filterValidContacts(inputContacts);
+				if (finalContacts.length === 0) {
+					throw new NodeOperationError(this.getNode(), `No valid contacts found [item ${i}]`, {
+						itemIndex: i,
+					});
+				}
+
+				// Sender type
+				const allSendersResponse = (await guniApiRequest.call(
+					this,
+					'GET',
+					'/auth/ac/sender-ids',
+					{} as IDataObject,
+					{} as IDataObject,
+					{ itemIndex: i },
+				)) as IDataObject;
+				const allSenders = Array.isArray(allSendersResponse?.data)
+					? (allSendersResponse.data as IDataObject[])
+					: [];
+				const selectedSender = allSenders.find((s) => s.value === senderId);
+				const senderDisplay = String(selectedSender?.display ?? '').toLowerCase();
+
+				let senderType = 'unknown';
+				if (/personal/i.test(senderDisplay)) senderType = 'personal';
+				else if (/dedicated/i.test(senderDisplay)) senderType = 'dedicated';
+				else if (/shared/i.test(senderDisplay)) senderType = 'shared';
+				else if (/business/i.test(senderDisplay)) senderType = 'business';
+
+				let optout = false;
+				let replyStopToOptOut = false;
+				let previewMessage = nodeMessage;
+				let extraLength = 0;
+
+				if (messageType === 'promotional') {
+					switch (senderType) {
+						case 'shared':
+						case 'dedicated':
+							optout = false;
+							replyStopToOptOut = true;
+							if (!nodeMessage.includes('Reply STOP')) previewMessage += '   Reply STOP to optout';
+							extraLength = 23;
+							break;
+						case 'personal':
+						default:
+							optout = true;
+							replyStopToOptOut = false;
+							if (!nodeMessage.includes('stopsms.co/u')) previewMessage += '  stopsms.co/u######';
+							extraLength = 20;
+					}
+				}
+
+				const smsInfo = calculateSmsParts(nodeMessage);
+				smsInfo.length += extraLength;
+
+				const requestBody = {
+					name: getFormattedName(),
+					sender: senderId,
+					campaign_type: messageType,
+					camp_type: 'sms',
+					optout,
+					replyStopToOptOut,
+					contacts: finalContacts,
+					unsubscribe: 0,
+					totalContacts: finalContacts.length,
+					message: nodeMessage,
+					saved: false,
+				};
+
+				const response = await guniApiRequest.call(
+					this,
+					'POST',
+					'/gateway/bulk?mode=Mobile',
+					requestBody as unknown as IDataObject,
+					{} as IDataObject,
+					{ itemIndex: i },
+				);
+
+				returnData.push({
+					json: {
+						success: true,
+						sentTo: finalContacts,
+						invalidContacts,
+						message: nodeMessage,
+						messageLength: smsInfo.length,
+						parts: smsInfo.parts,
+						encoding: smsInfo.encoding,
+						unicodeDetected: /[^\x00-\x7F]/.test(nodeMessage),
+						unicodeAllowed: allowUnicode,
+						selectedSenderDisplay: selectedSender?.display,
+						senderType,
+						previewMessage,
+						response: response as IDataObject,
+					},
+					pairedItem,
+				});
+			} else if (operation === 'sendMms') {
+				const senderId = this.getNodeParameter('mmsSenderId', i) as string;
+				const campaign_type = this.getNodeParameter('campaign_type', i) as string;
+
+				const json = items[i].json as GuniItemJson;
+				const message =
+					json.mmsMessage ??
+					json.body?.message ??
+					(this.getNodeParameter('mmsMessage', i) as string);
+				const mediaUrl =
+					json.mediaUrl ?? json.body?.media ?? (this.getNodeParameter('mediaUrl', i) as string);
+
+				if (!message || !mediaUrl) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`Message or Media URL not found in input data or node parameters [item ${i}]`,
+						{ itemIndex: i },
+					);
+				}
+
+				const inputContacts = json.body?.contacts;
+				if (!inputContacts || !Array.isArray(inputContacts) || inputContacts.length === 0) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`No contacts found in input data [item ${i}]`,
+						{ itemIndex: i },
+					);
+				}
+
+				// ✅ filter valid/invalid contacts
+				const { valid: finalContacts, invalid: skippedContacts } =
+					filterValidContacts(inputContacts);
+				if (finalContacts.length === 0) {
+					throw new NodeOperationError(this.getNode(), `No valid contacts found [item ${i}]`, {
+						itemIndex: i,
+					});
+				}
+
+				const finalContactsStr = JSON.stringify(finalContacts);
+
+				let previewMessage = message;
+				if (campaign_type === 'promotional') {
+					if (!previewMessage.includes('Reply STOP')) previewMessage += '  Reply STOP to opt-out';
+				}
+
+				const mmsBody: IDataObject = {
+					media: mediaUrl,
+					message,
+					deliveredMessage: previewMessage,
+					sender: senderId,
+					contacts: finalContactsStr,
+					name: getFormattedName(),
+					campaignType: campaign_type,
+					replyStopToOptOut: campaign_type === 'promotional' ? 'true' : 'false',
+				};
+
+				const response = await guniApiRequest.call(
+					this,
+					'POST',
+					'/gatewaymms/bulk',
+					mmsBody,
+					{} as IDataObject,
+					{ itemIndex: i },
+				);
+
+				returnData.push({
+					json: {
+						success: true,
+						sentTo: finalContacts,
+						skippedContacts,
+						originalMessage: message,
+						deliveredMessage: previewMessage,
+						messageLength: previewMessage.length,
+						media: mediaUrl,
+						campaign_type,
+						replyStopToOptOut: campaign_type === 'promotional',
+						response: response as IDataObject,
+					},
+					pairedItem,
+				});
+			} else {
+				throw new NodeOperationError(
+					this.getNode(),
+					`Unknown operation: "${operation}". Expected sendSms or sendMms.`,
+					{ itemIndex: i },
+				);
 			}
 		}
 

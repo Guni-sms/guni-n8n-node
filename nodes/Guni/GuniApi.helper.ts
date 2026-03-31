@@ -1,26 +1,44 @@
-import { IExecuteFunctions, IDataObject, IHttpRequestOptions } from 'n8n-workflow';
+import type {
+	IDataObject,
+	IExecuteFunctions,
+	IHttpRequestOptions,
+	ILoadOptionsFunctions,
+	JsonObject,
+} from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
+import { GUNI_API_BASE_URL } from './constants';
+
+/** Contexts that expose `helpers.httpRequestWithAuthentication` and `getNode`. */
+export type GuniRequestContext = IExecuteFunctions | ILoadOptionsFunctions;
+
+export interface GuniApiRequestOptions {
+	/** Input item index for richer error context in execute(). */
+	itemIndex?: number;
+}
 
 /**
- * Makes a request to the Guni API using n8n helpers
+ * Performs a JSON request against the Guni REST API.
+ *
+ * Authentication headers are injected automatically by n8n via the
+ * `authenticate` property on the `guniApi` credential — no manual
+ * token handling needed here.
+ *
+ * Failures are thrown as {@link NodeApiError} for correct n8n UI behavior.
  */
 export async function guniApiRequest(
-	this: IExecuteFunctions,
+	this: GuniRequestContext,
 	method: 'GET' | 'POST' | 'PUT' | 'DELETE',
 	endpoint: string,
 	body: IDataObject = {},
 	query: IDataObject = {},
-	apiKey: string,
-): Promise<any> {
-	const url = `https://api.gunisms.com.au/api/v1${endpoint}`;
+	options?: GuniApiRequestOptions,
+): Promise<unknown> {
+	const url = `${GUNI_API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
-	const options: IHttpRequestOptions = {
+	const requestOptions: IHttpRequestOptions = {
 		method,
 		url,
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-			'Content-Type': 'application/json',
-			'guni-token': apiKey, // some APIs require both
-		},
+		headers: { 'Content-Type': 'application/json' },
 		body,
 		qs: query,
 		json: true,
@@ -28,20 +46,32 @@ export async function guniApiRequest(
 	};
 
 	if (method === 'GET') {
-		delete options.body;
+		delete requestOptions.body;
 	}
 
 	try {
-		return await this.helpers.httpRequest(options);
-	} catch (error: any) {
-		const message =
-			error.response?.body?.message || error.response?.body || error.message || 'Unknown API error';
-		throw new Error(`Guni API Request Failed: ${message}`);
+		return await this.helpers.httpRequestWithAuthentication.call(
+			this,
+			'guniApi',
+			requestOptions,
+		);
+	} catch (error) {
+		if (error instanceof NodeApiError || error instanceof NodeOperationError) {
+			throw error;
+		}
+		const errorResponse: JsonObject =
+			error !== null && typeof error === 'object'
+				? (error as JsonObject)
+				: { message: String(error) };
+
+		throw new NodeApiError(this.getNode(), errorResponse, {
+			...(options?.itemIndex !== undefined ? { itemIndex: options.itemIndex } : {}),
+		});
 	}
 }
 
 /**
- * Format phone numbers before sending
+ * Format phone numbers before sending.
  */
 export function formatPhoneNumber(number: string): string {
 	return number.replace(/\D/g, '');
