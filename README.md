@@ -81,7 +81,7 @@ Want to send using your business name? [Set up a sender ID](https://help.gunisms
 - Minimum n8n version: 1.0.0
 - Tested with n8n 1.x and 2.x
 
-## Upgrading to 3.x (breaking changes)
+## Upgrading from 2.0.x
 
 - **Failed sends are real errors:** API and validation failures now **fail the node** (with `NodeApiError` / `NodeOperationError`) instead of returning an output item with `success: false`. Use n8n's **Continue On Fail** (node settings) or an **Error Workflow** if you need the old "soft failure" behavior.
 - **Item linking:** Successful outputs include `pairedItem` so downstream nodes and expressions resolve the correct input item.
@@ -89,10 +89,8 @@ Want to send using your business name? [Set up a sender ID](https://help.gunisms
 
 ## Version history
 
-- **3.1.0** — Use `httpRequestWithAuthentication` (n8n-standard auth); add `subtitle`, `authenticate` on credential, `group: []`; UX copy aligned with n8n guidelines; GitHub Actions publish workflow with provenance.
-- **3.0.1** — Propagate upstream `pairedItem`; reject unknown operations and empty post-strip SMS; single `GUNI_API_BASE_URL` constant.
-- **3.0.0** — `pairedItem` on outputs, API errors via `NodeApiError`, validation via `NodeOperationError`. MMS uses same helper as SMS.
-- **2.x** — Prior stable line.
+- **2.1.0** — n8n-standard auth (`httpRequestWithAuthentication`), `pairedItem` linking, proper `NodeApiError`/`NodeOperationError`, `subtitle`, `group: []`, UX copy aligned with n8n guidelines, GitHub Actions publish with provenance.
+- **2.0.x** — Prior stable line.
 - **1.0.2** — Initial release.
 
 ## Resources
