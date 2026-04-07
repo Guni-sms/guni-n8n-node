@@ -407,24 +407,25 @@ export class Guni implements INodeType {
 					{ itemIndex: i },
 				);
 
-				returnData.push({
-					json: {
-						success: true,
-						sentTo: finalContacts,
-						invalidContacts,
-						message: nodeMessage,
-						messageLength: smsInfo.length,
-						parts: smsInfo.parts,
-						encoding: smsInfo.encoding,
-						unicodeDetected: /[^\x00-\x7F]/.test(nodeMessage),
-						unicodeAllowed: allowUnicode,
-						selectedSenderDisplay: selectedSender?.display,
-						senderType,
-						previewMessage,
-						response: response as IDataObject,
-					},
-					pairedItem,
-				});
+			const apiResponse = response as IDataObject;
+			const apiData = apiResponse?.data as IDataObject | undefined;
+			const addedBulk = (apiData?.queueResponse as IDataObject)?.addedBulk as IDataObject | undefined;
+
+			returnData.push({
+				json: {
+					success: true,
+					messageId: addedBulk?._id ?? '',
+					status: addedBulk?.status ?? '',
+					sentTo: finalContacts,
+					invalidContacts,
+					message: nodeMessage,
+					parts: smsInfo.parts,
+					encoding: smsInfo.encoding,
+					campaignType: messageType,
+					senderType,
+				},
+				pairedItem,
+			});
 			} else if (operation === 'sendMms') {
 				const senderId = this.getNodeParameter('mmsSenderId', i) as string;
 				const campaign_type = this.getNodeParameter('campaign_type', i) as string;
@@ -490,21 +491,22 @@ export class Guni implements INodeType {
 					{ itemIndex: i },
 				);
 
-				returnData.push({
-					json: {
-						success: true,
-						sentTo: finalContacts,
-						skippedContacts,
-						originalMessage: message,
-						deliveredMessage: previewMessage,
-						messageLength: previewMessage.length,
-						media: mediaUrl,
-						campaign_type,
-						replyStopToOptOut: campaign_type === 'promotional',
-						response: response as IDataObject,
-					},
-					pairedItem,
-				});
+			const apiResponse = response as IDataObject;
+			const apiData = apiResponse?.data as IDataObject | undefined;
+
+			returnData.push({
+				json: {
+					success: true,
+					messageId: (apiData as IDataObject)?._id ?? '',
+					status: (apiData as IDataObject)?.status ?? '',
+					sentTo: finalContacts,
+					skippedContacts,
+					message,
+					media: mediaUrl,
+					campaignType: campaign_type,
+				},
+				pairedItem,
+			});
 			} else {
 				throw new NodeOperationError(
 					this.getNode(),
