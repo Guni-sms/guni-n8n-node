@@ -89,7 +89,8 @@ Want to send using your business name? [Set up a sender ID](https://help.gunisms
 
 ## Version history
 
-- **2.1.0** — n8n-standard auth (`httpRequestWithAuthentication`), `pairedItem` linking, proper `NodeApiError`/`NodeOperationError`, `subtitle`, `group: []`, UX copy aligned with n8n guidelines, GitHub Actions publish with provenance.
+- **2.2.0** — Production API URL, `continueOnFail()` support, contacts parameter for standalone use, sender ID lookup optimized, `group: ['output']`, codex category updated to Communication, n8n scanner verified.
+- **2.1.0** — n8n-standard auth (`httpRequestWithAuthentication`), `pairedItem` linking, proper `NodeApiError`/`NodeOperationError`, `subtitle`, UX copy aligned with n8n guidelines, GitHub Actions publish with provenance.
 - **2.0.x** — Prior stable line.
 - **1.0.2** — Initial release.
 
