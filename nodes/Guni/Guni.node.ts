@@ -104,7 +104,7 @@ export class Guni implements INodeType {
 		group: ['output'],
 		icon: 'file:guni.svg',
 		version: 1,
-		description: 'Send SMS or MMS via Guni API',
+		description: 'Send SMS or MMS via Guni',
 		defaults: { name: 'Guni' },
 		inputs: ['main'],
 		outputs: ['main'],
@@ -553,12 +553,15 @@ export class Guni implements INodeType {
 
 					const apiResponse = response as IDataObject;
 					const apiData = apiResponse?.data as IDataObject | undefined;
+					const addedBulk = (apiData?.queueResponse as IDataObject)?.addedBulk as
+						| IDataObject
+						| undefined;
 
 					returnData.push({
 						json: {
 							success: true,
-							messageId: (apiData as IDataObject)?._id ?? '',
-							status: (apiData as IDataObject)?.status ?? '',
+							messageId: addedBulk?._id ?? apiData?.bulkId ?? '',
+							status: addedBulk?.status ?? '',
 							sentTo: finalContacts,
 							skippedContacts,
 							message,
